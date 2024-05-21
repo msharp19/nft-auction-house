@@ -189,6 +189,7 @@ contract NFTAuction is Ownable {
        require(auction.SettledAt == 0, 'Auction has already been completed');
        require(auction.CancelledAt == 0, 'Auction has been cancelled');
        require(msg.value > auction.Bid, 'Must exceed previous bid');
+       require(msg.sender != auction.Owner, 'Owners cant bid on their own auction');
 
        // Return funds of previous bidder
        address previousBidder = auction.Bidder;
@@ -214,6 +215,7 @@ contract NFTAuction is Ownable {
        require(auction.EndDate > block.timestamp, 'Auction has already ended');
        require(auction.SettledAt == 0, 'Auction has already been completed');
        require(auction.CancelledAt == 0, 'Auction has been cancelled');
+       require(msg.sender == auction.Owner, 'Only owner can cancel auction');
 
        // Cancel
        auction.CancelledAt = block.timestamp;
