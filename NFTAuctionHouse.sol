@@ -360,7 +360,6 @@ contract NFTAuction is Ownable {
 
    function settleAuction(uint256 auctionId) external {
        Auction storage auction = Auctions[auctionId - 1];
-       Bid memory currentBid = Bids[auction.CurrentBidId];
        IERC721 tokenContract = IERC721(auction.Nft.ContractAddress);
 
        // Validate general issues
@@ -373,10 +372,11 @@ contract NFTAuction is Ownable {
        auction.SettledAt = block.timestamp;
 
        // If there is no bidder, return the NFT to the owner
-       if (currentBid.Exists == true && currentBid.Bidder == address(0)) {
+       if (auction.CurrentBidId > 0) {
            tokenContract.transferFrom(address(this), auction.Owner, auction.Nft.TokenId);
            emit SettleFailedAuction(auction.Id, block.timestamp);
        } else {
+           Bid memory currentBid = Bids[auction.CurrentBidId];
            address bidder = currentBid.Bidder;
            uint256 bid = currentBid.Value;
 
