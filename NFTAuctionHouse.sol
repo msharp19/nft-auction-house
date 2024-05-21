@@ -27,11 +27,6 @@ contract NFTAuction is Ownable {
       uint256 TokenId;
    }
 
-   enum AuctionType{
-       Time,
-       Sale
-   }
-
    mapping(address => bool) public SupportedNFTs;
 
    Auction[] public Auctions;
