@@ -49,7 +49,7 @@ contract NFTAuction is Ownable {
 
    constructor(){}
 
-   function GetAuctions(uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory auctions){
+   function getAuctions(uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory auctions){
       
       // Validate page limit
       require(perPage <= 1000, "Page limit exceeded");
@@ -80,7 +80,7 @@ contract NFTAuction is Ownable {
       return pageOfAuctions;
    }
 
-   function GetOwnersAuctions(address owner, uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory auctions){
+   function getOwnersAuctions(address owner, uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory auctions){
       
       // Validate page limit
       require(perPage <= 1000, "Page limit exceeded");
@@ -113,7 +113,7 @@ contract NFTAuction is Ownable {
       return pageOfAuctions;
    }
 
-   function GetNFTContractsAuctions(address nftContract, uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory auctions){
+   function getNFTContractsAuctions(address nftContract, uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory auctions){
       
       // Validate page limit
       require(perPage <= 1000, "Page limit exceeded");
@@ -146,11 +146,11 @@ contract NFTAuction is Ownable {
       return pageOfAuctions;
    }
 
-   function UpdateSupportedNFT(address nftContractAddress, bool supported) external {
+   function updateSupportedNFT(address nftContractAddress, bool supported) onlyOwner external {
       SupportedNFTs[nftContractAddress] = supported;
    }
 
-   function CreateAuction(address nftContractAddress, uint256 tokenId, string memory title, string memory description,
+   function createAuction(address nftContractAddress, uint256 tokenId, string memory title, string memory description,
        uint256 startDate, uint256 endDate, uint256 minimumBid) external {
 
       IERC721 tokenContract = IERC721(nftContractAddress);
@@ -178,7 +178,7 @@ contract NFTAuction is Ownable {
       emit AuctionCreated(auction.Id, msg.sender, nftContractAddress, tokenId, block.timestamp);
    }
 
-   function MakeBid(uint256 auctionId) payable external {
+   function makeBid(uint256 auctionId) payable external {
        
        Auction storage auction = Auctions[auctionId-1];
 
@@ -206,7 +206,7 @@ contract NFTAuction is Ownable {
        emit BidCreated(auction.Id, auction.Bidder, auction.Bid, block.timestamp);
    }
 
-   function CancelAuction(uint256 auctionId) external {
+   function cancelAuction(uint256 auctionId) external {
 
        Auction storage auction = Auctions[auctionId-1];
        IERC721 tokenContract = IERC721(auction.Nft.ContractAddress);
@@ -236,7 +236,7 @@ contract NFTAuction is Ownable {
        emit AuctionCancelled(auction.Id, auction.Owner, block.timestamp);
    }
 
-   function SettleAuction(uint256 auctionId) external {
+   function settleAuction(uint256 auctionId) external {
        Auction storage auction = Auctions[auctionId - 1];
        IERC721 tokenContract = IERC721(auction.Nft.ContractAddress);
 
