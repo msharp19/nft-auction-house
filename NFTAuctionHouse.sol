@@ -342,8 +342,8 @@ contract NFTAuction is Ownable {
        auction.CancelledAt = block.timestamp;
 
        // Return funds of previous bidder
-       Bid memory currentBid = Bids[auction.CurrentBidId-1];
-       if (currentBid.Exists == true && currentBid.Bidder != address(0)) {
+       if (auction.CurrentBidId > 0) {
+            Bid memory currentBid = Bids[auction.CurrentBidId-1];
             address bidder = currentBid.Bidder;
             uint256 bid = currentBid.Value;
 
