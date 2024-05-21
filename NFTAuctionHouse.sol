@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-contract NFTAuctionHouse is Ownable {
+contract NFTAuction is Ownable {
 
     struct Auction{
       uint256 Id;
@@ -191,14 +191,16 @@ contract NFTAuctionHouse is Ownable {
        require(msg.value > auction.Bid, 'Must exceed previous bid');
 
        // Return funds of previous bidder
-       if(auction.Bidder != address(0))
-       {
-           payable(auction.Bidder).transfer(auction.Bid);
-           emit Outbid(auction.Id, auction.Bidder, auction.Bid, block.timestamp);
-       }
+       address previousBidder = auction.Bidder;
+       uint256 previousBid = auction.Bid;
 
        auction.Bid = msg.value;
        auction.Bidder = msg.sender;
+
+       if (previousBidder != address(0)) {
+           payable(previousBidder).transfer(previousBid);
+           emit Outbid(auction.Id, previousBidder, previousBid, block.timestamp);
+       }
 
        emit BidCreated(auction.Id, auction.Bidder, auction.Bid, block.timestamp);
    }
@@ -217,45 +219,47 @@ contract NFTAuctionHouse is Ownable {
        auction.CancelledAt = block.timestamp;
 
        // Return funds of previous bidder
-       if(auction.Bidder != address(0))
-       {
-           payable(auction.Bidder).transfer(auction.Bid);
-           emit BidRefunded(auction.Id, auction.Bidder, auction.Bid, block.timestamp);
-       }
+       if (auction.Bidder != address(0)) {
+            address previousBidder = auction.Bidder;
+            uint256 previousBid = auction.Bid;
+            auction.Bidder = address(0);
+            auction.Bid = 0;
+
+            payable(previousBidder).transfer(previousBid);
+            emit BidRefunded(auction.Id, previousBidder, previousBid, block.timestamp);
+        }
 
        tokenContract.transferFrom(address(this), auction.Owner, auction.Nft.TokenId);
 
        emit AuctionCancelled(auction.Id, auction.Owner, block.timestamp);
    }
 
-   function SettleAuction(uint256 auctionId) external{
-      
-       Auction storage auction = Auctions[auctionId-1];
+   function SettleAuction(uint256 auctionId) external {
+       Auction storage auction = Auctions[auctionId - 1];
        IERC721 tokenContract = IERC721(auction.Nft.ContractAddress);
 
        // Validate general issues
-       require(auction.EndDate <= block.timestamp, 'Auction has already ended');
+       require(auction.EndDate <= block.timestamp, 'Auction has not ended');
        require(auction.SettledAt == 0, 'Auction has already been completed');
        require(auction.CancelledAt == 0, 'Auction has been cancelled');
        require(msg.sender == auction.Owner || msg.sender == auction.Bidder, 'Only owner of auction or top bidder can make settlement');
 
+       // Update state before external call
        auction.SettledAt = block.timestamp;
-       
+
        // If there is no bidder, return the NFT to the owner
-       if(auction.Bidder == address(0))
-       {
+       if (auction.Bidder == address(0)) {
            tokenContract.transferFrom(address(this), auction.Owner, auction.Nft.TokenId);
-
            emit SettleFailedAuction(auction.Id, block.timestamp);
-       }
-       // If there is a top bidder, send NFT to top bidder and pay owner the bid
-       else 
-       {
-           tokenContract.transferFrom(address(this), auction.Bidder, auction.Nft.TokenId);
+       } else {
+           address bidder = auction.Bidder;
+           uint256 bid = auction.Bid;
 
-           payable(auction.Owner).transfer(auction.Bid);
+           // Transfer NFT to top bidder and pay owner the bid
+           tokenContract.transferFrom(address(this), bidder, auction.Nft.TokenId);
+           payable(auction.Owner).transfer(bid);
 
            emit SettleSuccessfulAuction(auction.Id, block.timestamp);
-       }
-   }
+    }
+}
 }
