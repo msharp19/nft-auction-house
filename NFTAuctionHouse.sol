@@ -366,17 +366,17 @@ contract NFTAuction is Ownable {
        require(auction.EndDate <= block.timestamp, 'Auction has not ended');
        require(auction.SettledAt == 0, 'Auction has already been completed');
        require(auction.CancelledAt == 0, 'Auction has been cancelled');
-       require(msg.sender == auction.Owner, 'Only owner of auction or top bidder can make settlement');  
+       require(msg.sender == auction.Owner || auction.CurrentBidId > 0, 'Only owner of auction or top bidder can make settlement.');  
 
        // Update state before external call
        auction.SettledAt = block.timestamp;
 
        // If there is no bidder, return the NFT to the owner
-       if (auction.CurrentBidId == 0) {
-           tokenContract.transferFrom(address(this), auction.Owner, auction.Nft.TokenId);
-           emit SettleFailedAuction(auction.Id, block.timestamp);
-       } else {
+       if (auction.CurrentBidId > 0) {
            Bid memory currentBid = Bids[auction.CurrentBidId];
+
+           require(msg.sender == auction.Owner || msg.sender == currentBid.Bidder, 'Only owner of auction or top bidder can make settlement');  
+
            address bidder = currentBid.Bidder;
            uint256 bid = currentBid.Value;
 
@@ -385,6 +385,9 @@ contract NFTAuction is Ownable {
            payable(auction.Owner).transfer(bid);
 
            emit SettleSuccessfulAuction(auction.Id, block.timestamp);
+       } else {
+           tokenContract.transferFrom(address(this), auction.Owner, auction.Nft.TokenId);
+           emit SettleFailedAuction(auction.Id, block.timestamp);
     }
 }
 }
