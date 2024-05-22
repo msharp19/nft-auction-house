@@ -35,15 +35,15 @@ contract NFTAuction is Ownable {
       uint256 Timestamp;
    }
 
-   mapping(address => bool) public SupportedNFTs;
+   mapping(address => bool) public supportedNFTs;
 
-   Auction[] public Auctions;
-   Bid[] public Bids;
+   Auction[] public auctions;
+   Bid[] public bids;
 
-   mapping(address => uint256[]) public UsersAuctionsIndexes;
-   mapping(address => uint256[]) public NftsAuctionsIndexes;
-   mapping(address => uint256[]) public UsersBidIndexes;
-   mapping(uint256 => uint256[]) public AuctionsBidIndexes;
+   mapping(address => uint256[]) private _usersAuctionsIndexes;
+   mapping(address => uint256[]) private _nftsAuctionsIndexes;
+   mapping(address => uint256[]) private _usersBidIndexes;
+   mapping(uint256 => uint256[]) private _auctionsBidIndexes;
 
    event AuctionCreated(uint256 auctionId, address indexed sender, address indexed nftContractAddress, uint256 indexed tokenId, uint256 timestamp);
    event Outbid(uint256 bidId, uint256 outbidByBidId, uint256 auctionId, address indexed bidder, uint256 timestamp);
@@ -55,210 +55,8 @@ contract NFTAuction is Ownable {
 
    constructor(){}
 
-   function getAuction(uint256 auctionId) public view returns(Auction memory auction){
-      auction = Auctions[auctionId-1];
-   }
-
-   function getAuctions(uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory auctions){
-      
-      // Validate page limit
-      require(perPage <= 1000, "Page limit exceeded");
-
-      // Get the index to start from
-      uint256 startingIndex = pageNumber * perPage;
-
-      // The number of auctions that will be returned (to set array)
-      uint256 remaining = Auctions.length - startingIndex;
-      uint256 pageSize = ((startingIndex+1)>Auctions.length) ? 0 : (remaining < perPage) ? remaining : perPage;
-
-      // Create the page
-      Auction[] memory pageOfAuctions = new Auction[](pageSize);
-
-      // Add each item to the page
-      uint256 pageItemIndex = 0;
-      for(uint256 i = startingIndex;i < (startingIndex + pageSize);i++){
-          // Get the auction
-          Auction memory auction = Auctions[i];
-
-          // Add to page
-          pageOfAuctions[pageItemIndex] = auction;
-
-          // Increment page item index
-          pageItemIndex++;
-      }
-
-      return pageOfAuctions;
-   }
-
-   function getOwnersAuctions(address owner, uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory auctions){
-      
-      // Validate page limit
-      require(perPage <= 1000, "Page limit exceeded");
-
-      // Get the index to start from
-      uint256 startingIndex = pageNumber * perPage;
-
-      uint256[] memory indexes = UsersAuctionsIndexes[owner];
-
-      // The number of auctions that will be returned (to set array)
-      uint256 remaining = indexes.length - startingIndex;
-      uint256 pageSize = ((startingIndex+1)>Auctions.length) ? 0 : (remaining < perPage) ? remaining : perPage;
-
-      // Create the page
-      Auction[] memory pageOfAuctions = new Auction[](pageSize);
-
-      // Add each item to the page
-      uint256 pageItemIndex = 0;
-      for(uint256 i = startingIndex;i < (startingIndex + pageSize);i++){
-          // Get the auction
-          Auction memory auction = Auctions[indexes[i]];
-
-          // Add to page
-          pageOfAuctions[pageItemIndex] = auction;
-
-          // Increment page item index
-          pageItemIndex++;
-      }
-
-      return pageOfAuctions;
-   }
-
-   function getNFTContractsAuctions(address nftContract, uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory auctions){
-      
-      // Validate page limit
-      require(perPage <= 1000, "Page limit exceeded");
-
-      // Get the index to start from
-      uint256 startingIndex = pageNumber * perPage;
-
-      uint256[] memory indexes = NftsAuctionsIndexes[nftContract];
-
-      // The number of auctions that will be returned (to set array)
-      uint256 remaining = indexes.length - startingIndex;
-      uint256 pageSize = ((startingIndex+1)>Auctions.length) ? 0 : (remaining < perPage) ? remaining : perPage;
-
-      // Create the page
-      Auction[] memory pageOfAuctions = new Auction[](pageSize);
-
-      // Add each item to the page
-      uint256 pageItemIndex = 0;
-      for(uint256 i = startingIndex;i < (startingIndex + pageSize);i++){
-          // Get the auction
-          Auction memory auction = Auctions[indexes[i]];
-
-          // Add to page
-          pageOfAuctions[pageItemIndex] = auction;
-
-          // Increment page item index
-          pageItemIndex++;
-      }
-
-      return pageOfAuctions;
-   }
-
-    function getBid(uint256 bidId) public view returns(Bid memory bid){
-      bid = Bids[bidId-1];
-   }
-
-   function getBids(uint256 pageNumber, uint256 perPage) public view returns(Bid[] memory bids){
-      
-      // Validate page limit
-      require(perPage <= 1000, "Page limit exceeded");
-
-      // Get the index to start from
-      uint256 startingIndex = pageNumber * perPage;
-
-      // The number of bids that will be returned (to set array)
-      uint256 remaining = Bids.length - startingIndex;
-      uint256 pageSize = ((startingIndex+1)>Bids.length) ? 0 : (remaining < perPage) ? remaining : perPage;
-
-      // Create the page
-      Bid[] memory pageOfBids = new Bid[](pageSize);
-
-      // Add each item to the page
-      uint256 pageItemIndex = 0;
-      for(uint256 i = startingIndex;i < (startingIndex + pageSize);i++){
-          // Get the bid
-          Bid memory bid = Bids[i];
-
-          // Add to page
-          pageOfBids[pageItemIndex] = bid;
-
-          // Increment page item index
-          pageItemIndex++;
-      }
-
-      return pageOfBids;
-   }
-
-   function getOwnersBids(address owner, uint256 pageNumber, uint256 perPage) public view returns(Bid[] memory bids){
-      
-      // Validate page limit
-      require(perPage <= 1000, "Page limit exceeded");
-
-      // Get the index to start from
-      uint256 startingIndex = pageNumber * perPage;
-
-      uint256[] memory indexes = UsersBidIndexes[owner];
-
-      // The number of bids that will be returned (to set array)
-      uint256 remaining = indexes.length - startingIndex;
-      uint256 pageSize = ((startingIndex+1)>Bids.length) ? 0 : (remaining < perPage) ? remaining : perPage;
-
-      // Create the page
-      Bid[] memory pageOfBids = new Bid[](pageSize);
-
-      // Add each item to the page
-      uint256 pageItemIndex = 0;
-      for(uint256 i = startingIndex;i < (startingIndex + pageSize);i++){
-          // Get the bid
-          Bid memory bid = Bids[indexes[i]];
-
-          // Add to page
-          pageOfBids[pageItemIndex] = bid;
-
-          // Increment page item index
-          pageItemIndex++;
-      }
-
-      return pageOfBids;
-   }
-
-   function getAuctionsBids(uint256 auctionId, uint256 pageNumber, uint256 perPage) public view returns(Bid[] memory bids){
-      
-      // Validate page limit
-      require(perPage <= 1000, "Page limit exceeded");
-
-      // Get the index to start from
-      uint256 startingIndex = pageNumber * perPage;
-
-      uint256[] memory indexes = AuctionsBidIndexes[auctionId];
-
-      // The number of auctions that will be returned (to set array)
-      uint256 remaining = indexes.length - startingIndex;
-      uint256 pageSize = ((startingIndex+1)>Bids.length) ? 0 : (remaining < perPage) ? remaining : perPage;
-
-      // Create the page
-      Bid[] memory pageOfBids = new Bid[](pageSize);
-
-      // Add each item to the page
-      uint256 pageItemIndex = 0;
-      for(uint256 i = startingIndex;i < (startingIndex + pageSize);i++){
-          // Get the bid
-          Bid memory auction = Bids[indexes[i]];
-
-          // Add to page
-          pageOfBids[pageItemIndex] = auction;
-
-          // Increment page item index
-          pageItemIndex++;
-      }
-
-      return pageOfBids;
-   }
-
    function updateSupportedNFT(address nftContractAddress, bool supported) onlyOwner external {
-      SupportedNFTs[nftContractAddress] = supported;
+      supportedNFTs[nftContractAddress] = supported;
    }
 
    function createAuction(address nftContractAddress, uint256 tokenId, string memory title, 
@@ -267,7 +65,7 @@ contract NFTAuction is Ownable {
       IERC721 tokenContract = IERC721(nftContractAddress);
       
       // Validate general issues
-      require(SupportedNFTs[nftContractAddress] == true, 'Contract not supported');
+      require(supportedNFTs[nftContractAddress] == true, 'Contract not supported');
       require(tokenContract.ownerOf(tokenId) == msg.sender, 'Sender does not own token');
       require(tokenContract.getApproved(tokenId) == address(this), 'This auction house is not approved to take token');
       require(endDate > startDate, 'End date must be after the start date');
@@ -278,12 +76,12 @@ contract NFTAuction is Ownable {
 
       // Create the records
       Nft memory nft = Nft(nftContractAddress, tokenId);
-      Auction memory auction = Auction((Auctions.length + 1), nft, msg.sender, title, startDate,
+      Auction memory auction = Auction((auctions.length + 1), nft, msg.sender, title, startDate,
          endDate, 0, minimumBid, 0, 0);
 
-      Auctions.push(auction);
-      UsersAuctionsIndexes[msg.sender].push(Auctions.length-1);
-      NftsAuctionsIndexes[nftContractAddress].push(Auctions.length-1);
+      auctions.push(auction);
+      _usersAuctionsIndexes[msg.sender].push(auctions.length-1);
+      _nftsAuctionsIndexes[nftContractAddress].push(auctions.length-1);
 
       // Send event
       emit AuctionCreated(auction.Id, msg.sender, nftContractAddress, tokenId, block.timestamp);
@@ -291,7 +89,7 @@ contract NFTAuction is Ownable {
 
    function makeBid(uint256 auctionId) payable external {
        
-       Auction storage auction = Auctions[auctionId-1];
+       Auction storage auction = auctions[auctionId-1];
 
        // Validate general issues
        require(auction.StartDate < block.timestamp, 'Auction has not started');
@@ -305,16 +103,16 @@ contract NFTAuction is Ownable {
        address previousBidder = address(0);
        uint256 previousBid = 0;
        if(previousBidId > 0){
-          Bid memory currentBid = Bids[auction.CurrentBidId-1];
+          Bid memory currentBid = bids[auction.CurrentBidId-1];
           require(msg.value > currentBid.Value, 'Must exceed previous bid');        
           previousBidder = currentBid.Bidder;
           previousBid = currentBid.Value;    
        }
       
-       Bid memory newBid = Bid(true, Bids.length + 1, msg.sender, msg.value, msg.value - previousBid, previousBidId, block.timestamp);
-       Bids.push(newBid);
-       UsersBidIndexes[msg.sender].push(Bids.length-1);
-       AuctionsBidIndexes[auction.Id].push(Bids.length-1);
+       Bid memory newBid = Bid(true, bids.length + 1, msg.sender, msg.value, msg.value - previousBid, previousBidId, block.timestamp);
+       bids.push(newBid);
+       _usersBidIndexes[msg.sender].push(bids.length-1);
+       _auctionsBidIndexes[auction.Id].push(bids.length-1);
 
        auction.CurrentBidId = newBid.Id;
 
@@ -329,7 +127,7 @@ contract NFTAuction is Ownable {
 
    function cancelAuction(uint256 auctionId) external {
 
-       Auction storage auction = Auctions[auctionId-1];
+       Auction storage auction = auctions[auctionId-1];
        IERC721 tokenContract = IERC721(auction.Nft.ContractAddress);
        
        // Validate general issues
@@ -343,7 +141,7 @@ contract NFTAuction is Ownable {
 
        // Return funds of previous bidder
        if (auction.CurrentBidId > 0) {
-            Bid memory currentBid = Bids[auction.CurrentBidId-1];
+            Bid memory currentBid = bids[auction.CurrentBidId-1];
             address bidder = currentBid.Bidder;
             uint256 bid = currentBid.Value;
 
@@ -359,7 +157,7 @@ contract NFTAuction is Ownable {
    }
 
    function settleAuction(uint256 auctionId) external {
-       Auction storage auction = Auctions[auctionId - 1];
+       Auction storage auction = auctions[auctionId - 1];
        IERC721 tokenContract = IERC721(auction.Nft.ContractAddress);
 
        // Validate general issues
@@ -373,7 +171,7 @@ contract NFTAuction is Ownable {
 
        // If there is no bidder, return the NFT to the owner
        if (auction.CurrentBidId > 0) {
-           Bid memory currentBid = Bids[auction.CurrentBidId];
+           Bid memory currentBid = bids[auction.CurrentBidId];
 
            require(msg.sender == auction.Owner || msg.sender == currentBid.Bidder, 'Only owner of auction or top bidder can make settlement');  
 
@@ -388,6 +186,208 @@ contract NFTAuction is Ownable {
        } else {
            tokenContract.transferFrom(address(this), auction.Owner, auction.Nft.TokenId);
            emit SettleFailedAuction(auction.Id, block.timestamp);
-    }
-}
+       }
+   }
+
+   function getAuction(uint256 auctionId) public view returns(Auction memory auction){
+      auction = auctions[auctionId-1];
+   }
+
+   function getAuctions(uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory){
+      
+      // Validate page limit
+      require(perPage <= 1000, "Page limit exceeded");
+
+      // Get the index to start from
+      uint256 startingIndex = pageNumber * perPage;
+
+      // The number of auctions that will be returned (to set array)
+      uint256 remaining = auctions.length - startingIndex;
+      uint256 pageSize = ((startingIndex+1)>auctions.length) ? 0 : (remaining < perPage) ? remaining : perPage;
+
+      // Create the page
+      Auction[] memory pageOfAuctions = new Auction[](pageSize);
+
+      // Add each item to the page
+      uint256 pageItemIndex = 0;
+      for(uint256 i = startingIndex;i < (startingIndex + pageSize);i++){
+          // Get the auction
+          Auction memory auction = auctions[i];
+
+          // Add to page
+          pageOfAuctions[pageItemIndex] = auction;
+
+          // Increment page item index
+          pageItemIndex++;
+      }
+
+      return pageOfAuctions;
+   }
+
+   function getOwnersAuctions(address owner, uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory){
+      
+      // Validate page limit
+      require(perPage <= 1000, "Page limit exceeded");
+
+      // Get the index to start from
+      uint256 startingIndex = pageNumber * perPage;
+
+      uint256[] memory indexes = _usersAuctionsIndexes[owner];
+
+      // The number of auctions that will be returned (to set array)
+      uint256 remaining = indexes.length - startingIndex;
+      uint256 pageSize = ((startingIndex+1)>auctions.length) ? 0 : (remaining < perPage) ? remaining : perPage;
+
+      // Create the page
+      Auction[] memory pageOfAuctions = new Auction[](pageSize);
+
+      // Add each item to the page
+      uint256 pageItemIndex = 0;
+      for(uint256 i = startingIndex;i < (startingIndex + pageSize);i++){
+          // Get the auction
+          Auction memory auction = auctions[indexes[i]];
+
+          // Add to page
+          pageOfAuctions[pageItemIndex] = auction;
+
+          // Increment page item index
+          pageItemIndex++;
+      }
+
+      return pageOfAuctions;
+   }
+
+   function getNFTContractsAuctions(address nftContract, uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory){
+      
+      // Validate page limit
+      require(perPage <= 1000, "Page limit exceeded");
+
+      // Get the index to start from
+      uint256 startingIndex = pageNumber * perPage;
+
+      uint256[] memory indexes = _nftsAuctionsIndexes[nftContract];
+
+      // The number of auctions that will be returned (to set array)
+      uint256 remaining = indexes.length - startingIndex;
+      uint256 pageSize = ((startingIndex+1)>auctions.length) ? 0 : (remaining < perPage) ? remaining : perPage;
+
+      // Create the page
+      Auction[] memory pageOfAuctions = new Auction[](pageSize);
+
+      // Add each item to the page
+      uint256 pageItemIndex = 0;
+      for(uint256 i = startingIndex;i < (startingIndex + pageSize);i++){
+          // Get the auction
+          Auction memory auction = auctions[indexes[i]];
+
+          // Add to page
+          pageOfAuctions[pageItemIndex] = auction;
+
+          // Increment page item index
+          pageItemIndex++;
+      }
+
+      return pageOfAuctions;
+   }
+
+    function getBid(uint256 bidId) public view returns(Bid memory bid){
+      bid = bids[bidId-1];
+   }
+
+   function getBids(uint256 pageNumber, uint256 perPage) public view returns(Bid[] memory){
+      
+      // Validate page limit
+      require(perPage <= 1000, "Page limit exceeded");
+
+      // Get the index to start from
+      uint256 startingIndex = pageNumber * perPage;
+
+      // The number of bids that will be returned (to set array)
+      uint256 remaining = bids.length - startingIndex;
+      uint256 pageSize = ((startingIndex+1)>bids.length) ? 0 : (remaining < perPage) ? remaining : perPage;
+
+      // Create the page
+      Bid[] memory pageOfBids = new Bid[](pageSize);
+
+      // Add each item to the page
+      uint256 pageItemIndex = 0;
+      for(uint256 i = startingIndex;i < (startingIndex + pageSize);i++){
+          // Get the bid
+          Bid memory bid = bids[i];
+
+          // Add to page
+          pageOfBids[pageItemIndex] = bid;
+
+          // Increment page item index
+          pageItemIndex++;
+      }
+
+      return pageOfBids;
+   }
+
+   function getOwnersBids(address owner, uint256 pageNumber, uint256 perPage) public view returns(Bid[] memory){
+      
+      // Validate page limit
+      require(perPage <= 1000, "Page limit exceeded");
+
+      // Get the index to start from
+      uint256 startingIndex = pageNumber * perPage;
+
+      uint256[] memory indexes = _usersBidIndexes[owner];
+
+      // The number of bids that will be returned (to set array)
+      uint256 remaining = indexes.length - startingIndex;
+      uint256 pageSize = ((startingIndex+1)>bids.length) ? 0 : (remaining < perPage) ? remaining : perPage;
+
+      // Create the page
+      Bid[] memory pageOfBids = new Bid[](pageSize);
+
+      // Add each item to the page
+      uint256 pageItemIndex = 0;
+      for(uint256 i = startingIndex;i < (startingIndex + pageSize);i++){
+          // Get the bid
+          Bid memory bid = bids[indexes[i]];
+
+          // Add to page
+          pageOfBids[pageItemIndex] = bid;
+
+          // Increment page item index
+          pageItemIndex++;
+      }
+
+      return pageOfBids;
+   }
+
+   function getAuctionsBids(uint256 auctionId, uint256 pageNumber, uint256 perPage) public view returns(Bid[] memory){
+      
+      // Validate page limit
+      require(perPage <= 1000, "Page limit exceeded");
+
+      // Get the index to start from
+      uint256 startingIndex = pageNumber * perPage;
+
+      uint256[] memory indexes = _auctionsBidIndexes[auctionId];
+
+      // The number of auctions that will be returned (to set array)
+      uint256 remaining = indexes.length - startingIndex;
+      uint256 pageSize = ((startingIndex+1)>bids.length) ? 0 : (remaining < perPage) ? remaining : perPage;
+
+      // Create the page
+      Bid[] memory pageOfBids = new Bid[](pageSize);
+
+      // Add each item to the page
+      uint256 pageItemIndex = 0;
+      for(uint256 i = startingIndex;i < (startingIndex + pageSize);i++){
+          // Get the bid
+          Bid memory auction = bids[indexes[i]];
+
+          // Add to page
+          pageOfBids[pageItemIndex] = auction;
+
+          // Increment page item index
+          pageItemIndex++;
+      }
+
+      return pageOfBids;
+   }  
 }
