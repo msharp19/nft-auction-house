@@ -154,24 +154,6 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         }
     }
 
-    function endAuction(uint256 auctionId) external nonReentrant {
-        require(auctionId > 0 && auctionId <= auctions.length, "Invalid auction ID");
-
-        Auction storage auction = auctions[auctionId - 1];
-        IERC721 tokenContract = IERC721(auction.Nft.ContractAddress);
-        
-        // Validate general issues
-        require(auction.EndDate > block.timestamp, 'Auction has already ended');
-        require(auction.EthCollectedAt == 0, 'Auction ETH collection has already been completed');
-        require(auction.NftCollectedAt == 0, 'Auction NFT collection has already been completed');
-        require(msg.sender == auction.Owner, 'Only owner can cancel auction');
-
-        // Update state before external call
-        auction.EndDate = block.timestamp;
-
-        emit AuctionPrematurelyEnded(auction.Id, auction.Owner, block.timestamp);
-    }
-
     function collectNftFromAuction(uint256 auctionId) external nonReentrant {
         require(auctionId > 0 && auctionId <= auctions.length, "Invalid auction ID");
 
