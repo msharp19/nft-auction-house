@@ -20,7 +20,6 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         uint256 MinimumBid;
         uint256 NftCollectedAt;
         uint256 EthCollectedAt;
-        uint256 CancelledAt;
     }
 
     struct Nft {
@@ -55,10 +54,10 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
     event Outbid(uint256 bidId, uint256 outbidByBidId, uint256 auctionId, address indexed bidder, uint256 timestamp);
     event BidRefunded(uint256 bidId, uint256 auctionId, address indexed bidder, uint256 bid, uint256 timestamp);
     event BidCreated(uint256 bidId, uint256 auctionId, address indexed bidder, uint256 bid, uint256 timestamp);
-    event AuctionCancelled(uint256 auctionId, address indexed owner, uint256 timestamp);
     event SettleFailedAuction(uint256 auctionId, uint256 timestamp);
     event AuctionEthCollected(uint256 auctionId, uint256 timestamp);
     event AuctionNftCollected(uint256 auctionId, uint256 timestamp);
+    event AuctionPrematurelyEnded(uint256 auctionId, address indexed owner, uint256 timestamp);
 
     constructor() {}
 
@@ -93,8 +92,7 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
             CurrentBidId: 0,
             MinimumBid: minimumBid,
             NftCollectedAt: 0,
-            EthCollectedAt: 0,
-            CancelledAt: 0
+            EthCollectedAt: 0
         });
 
         auctionIdCounter++;
@@ -117,7 +115,6 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         require(msg.value > auction.MinimumBid, 'Minimum bid has not been met');
         require(auction.EthCollectedAt == 0, 'Auction ETH collection has already been completed');
         require(auction.NftCollectedAt == 0, 'Auction NFT collection has already been completed');
-        require(auction.CancelledAt == 0, 'Auction has been cancelled');
         require(msg.sender != auction.Owner, 'Owners can\'t bid on their own auction');
 
         uint256 previousBidId = auction.CurrentBidId;
@@ -157,7 +154,7 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         }
     }
 
-    function cancelAuction(uint256 auctionId) external nonReentrant {
+    function endAuction(uint256 auctionId) external nonReentrant {
         require(auctionId > 0 && auctionId <= auctions.length, "Invalid auction ID");
 
         Auction storage auction = auctions[auctionId - 1];
@@ -167,28 +164,12 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         require(auction.EndDate > block.timestamp, 'Auction has already ended');
         require(auction.EthCollectedAt == 0, 'Auction ETH collection has already been completed');
         require(auction.NftCollectedAt == 0, 'Auction NFT collection has already been completed');
-        require(auction.CancelledAt == 0, 'Auction has been cancelled');
         require(msg.sender == auction.Owner, 'Only owner can cancel auction');
 
         // Update state before external call
-        auction.CancelledAt = block.timestamp;
+        auction.EndDate = block.timestamp;
 
-        // Return funds of previous bidder
-        if (auction.CurrentBidId > 0) {
-            Bid memory currentBid = bids[auction.CurrentBidId - 1];
-            address bidder = currentBid.Bidder;
-            uint256 bid = currentBid.Value;
-
-            auction.CurrentBidId = 0;
-
-            (bool success, ) = payable(bidder).call{value: bid}("");
-            require(success, "Refund to previous bidder failed");
-            emit BidRefunded(currentBid.Id, auction.Id, bidder, bid, block.timestamp);
-        }
-
-        tokenContract.safeTransferFrom(address(this), auction.Owner, auction.Nft.TokenId);
-
-        emit AuctionCancelled(auction.Id, auction.Owner, block.timestamp);
+        emit AuctionPrematurelyEnded(auction.Id, auction.Owner, block.timestamp);
     }
 
     function collectNftFromAuction(uint256 auctionId) external nonReentrant {
@@ -200,7 +181,6 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         // Validate general issues
         require(auction.EndDate <= block.timestamp, 'Auction has not ended');
         require(auction.NftCollectedAt == 0, 'Auction NFT collection has already been completed');
-        require(auction.CancelledAt == 0, 'Auction has been cancelled');
         require(msg.sender == auction.Owner || auction.CurrentBidId > 0, 'Only owner of auction or top bidder can make NFT settlement.');
 
         // Update state before external call
@@ -232,7 +212,6 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         // Validate general issues
         require(auction.EndDate <= block.timestamp, 'Auction has not ended');
         require(auction.EthCollectedAt == 0, 'Auction ETH collection has already been completed');
-        require(auction.CancelledAt == 0, 'Auction has been cancelled');
         require(msg.sender == auction.Owner, 'Only owner of auction can take Eth from sale.');
 
         // Update state before external call
