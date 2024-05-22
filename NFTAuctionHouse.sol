@@ -146,7 +146,7 @@ contract NFTAuction is Ownable, ReentrancyGuard {
 
         // Return funds of previous bidder
         if (previousBidId > 0 && previousBidder != address(0)) {
-            (bool success, ) = previousBidder.call{value: previousBid}("");
+            (bool success, ) = payable(previousBidder).call{value: previousBid}("");
             require(success, "Refund to previous bidder failed");
             emit Outbid(previousBidId, newBid.Id, auction.Id, previousBidder, block.timestamp);
         }
@@ -175,7 +175,7 @@ contract NFTAuction is Ownable, ReentrancyGuard {
 
             auction.CurrentBidId = 0;
 
-            (bool success, ) = bidder.call{value: bid}("");
+            (bool success, ) = payable(bidder).call{value: bid}("");
             require(success, "Refund to previous bidder failed");
             emit BidRefunded(currentBid.Id, auction.Id, bidder, bid, block.timestamp);
         }
@@ -211,7 +211,7 @@ contract NFTAuction is Ownable, ReentrancyGuard {
 
             // Transfer NFT to top bidder and pay owner the bid
             tokenContract.safeTransferFrom(address(this), bidder, auction.Nft.TokenId);
-            (bool success, ) = auction.Owner.call{value: bid}("");
+            (bool success, ) = payable(auction.Owner).call{value: bid}("");
             require(success, "Transfer to auction owner failed");
             emit SettleSuccessfulAuction(auction.Id, block.timestamp);
         } else {
