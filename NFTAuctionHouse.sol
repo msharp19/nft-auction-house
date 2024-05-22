@@ -57,7 +57,6 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
     event SettleFailedAuction(uint256 auctionId, uint256 timestamp);
     event AuctionEthCollected(uint256 auctionId, uint256 timestamp);
     event AuctionNftCollected(uint256 auctionId, uint256 timestamp);
-    event AuctionPrematurelyEnded(uint256 auctionId, address indexed owner, uint256 timestamp);
 
     constructor() {}
 
