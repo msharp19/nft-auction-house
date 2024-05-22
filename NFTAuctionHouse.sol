@@ -217,7 +217,7 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
       require(auctionId > 0 && auctionId <= auctions.length, "Invalid auction ID");
       return auctions[auctionId - 1];
    }
-
+   
    function getAuctions(uint256 pageNumber, uint256 perPage) public view returns(Auction[] memory){
       
       // Validate page limit
