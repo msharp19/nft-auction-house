@@ -5,8 +5,9 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-contract NFTAuction is Ownable, ReentrancyGuard {
+contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
 
     struct Auction {
         uint256 Id;
@@ -374,5 +375,9 @@ contract NFTAuction is Ownable, ReentrancyGuard {
       }
 
       return pageOfBids;
+   }
+
+   function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
+        return IERC721Receiver.onERC721Received.selector;
    }
 }
