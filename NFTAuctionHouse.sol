@@ -37,7 +37,7 @@
  .:::::::::..:::.:.-  @@@@@@@@@@@@@@@%#++++=+*%%@@@@@@@@@@@@@@@ .::::::..::::::..::::::::::::::..:::::::.    #@@@#+@@ 
  .:::::::::..::::::.  @*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ @ .::::::..::::::..::::::::::::::..:::::::::..    =@@@  
  .:::::::::..:::::::  @@#.       .:-==+*++++++==-::        +%@@ .::::::..::::::..::::::::::::::..::::::..:::::.       
- :::::::::::::::::::  @@@@@@@@@@@@@@@@%%%%%%%%@@@%@@@@@@@@@@@@@ ::::::::::::::::::::::::::::::::::::::::::::::::::.::                                                                                                                                                                                                                                                                                                                                                                            
+ :::::::::::::::::::  @@@@@@@@@@@@@@@@%%%%%%%%@@@%@@@@@@@@@@@@@ ::::::::::::::::::::::::::::::::::::::::::::::::::.::                                                                                                                                                                                                                                                                                                                                                                        
 */
 
 pragma solidity ^0.8.0;
@@ -82,9 +82,6 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
     Auction[] public auctions;
     Bid[] public bids;
 
-    uint256 private auctionIdCounter;
-    uint256 private bidIdCounter;
-
     mapping(address => uint256[]) private _usersAuctionsIndexes;
     mapping(address => uint256[]) private _nftsAuctionsIndexes;
     mapping(address => uint256[]) private _usersBidIndexes;
@@ -122,7 +119,7 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         // Create the records
         Nft memory nft = Nft(nftContractAddress, tokenId);
         Auction memory auction = Auction({
-            Id: auctionIdCounter + 1,
+            Id: auctions.length + 1,
             Nft: nft,
             Owner: msg.sender,
             Title: title,
@@ -134,10 +131,10 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
             EthCollectedAt: 0
         });
 
-        auctionIdCounter++;
         auctions.push(auction);
-        _usersAuctionsIndexes[msg.sender].push(auctionIdCounter - 1);
-        _nftsAuctionsIndexes[nftContractAddress].push(auctionIdCounter - 1);
+        uint256 auctionsIndex = auctions.length - 1;
+        _usersAuctionsIndexes[msg.sender].push(auctionsIndex);
+        _nftsAuctionsIndexes[nftContractAddress].push(auctionsIndex);
 
         // Send event
         emit AuctionCreated(auction.Id, msg.sender, nftContractAddress, tokenId, block.timestamp);
@@ -168,7 +165,7 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
         
         Bid memory newBid = Bid({
             Exists: true,
-            Id: bidIdCounter + 1,
+            Id: bids.length + 1,
             Bidder: msg.sender,
             Value: msg.value,
             XAbove: msg.value - previousBid,
@@ -176,10 +173,10 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
             Timestamp: block.timestamp
         });
 
-        bidIdCounter++;
         bids.push(newBid);
-        _usersBidIndexes[msg.sender].push(bidIdCounter - 1);
-        _auctionsBidIndexes[auction.Id].push(bidIdCounter - 1);
+        uint256 bidsIndex = bids.length -1;
+        _usersBidIndexes[msg.sender].push(bidsIndex);
+        _auctionsBidIndexes[auction.Id].push(bidsIndex);
         auction.CurrentBidId = newBid.Id;
 
         // Emit event before refund to adhere to CEI pattern
@@ -412,4 +409,12 @@ contract NFTAuction is Ownable, ReentrancyGuard, IERC721Receiver {
    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
    }
+
+   fallback() external payable {
+    revert("This contract does not accept Ether directly");
+    }
+
+    receive() external payable {
+        revert("This contract does not accept Ether directly");
+    }
 }
